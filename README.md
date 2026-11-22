@@ -576,3 +576,12 @@ Bookworm demonstrates the development of a full-stack web application using Angu
 The project combines a user-friendly frontend with modular backend services, relational database management, authentication, borrowing workflows, reservation queues, fine calculations, and automated tests.
 
 It provides a practical implementation of a Library Lending Management System while demonstrating essential full-stack software engineering concepts.
+
+
+---
+
+## Project Demo Video
+
+Watch the complete demonstration of the Bookworm Library Lending Management System.
+
+[▶ Watch Demo Video](./demo/Bookworm_Demo.mp4)
