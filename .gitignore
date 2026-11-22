@@ -1,0 +1,39 @@
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Angular / Node
+node_modules/
+.angular/
+dist/
+coverage/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local databases
+*.sqlite3
+*.db
+
+# Sensitive credentials
+credentials.json
+service-account.json
+frontend-git-backup/

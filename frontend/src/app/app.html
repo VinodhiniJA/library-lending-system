@@ -1,0 +1,1982 @@
+
+<div class="app bookworm-app">
+
+  <!-- ==========================================
+       AUTHENTICATED BOOKWORM WORKSPACE
+       ========================================== -->
+
+  <div
+    *ngIf="token && !restoringSession"
+    class="workspace">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar">
+
+      <div class="sidebar-brand">
+        <div class="brand-icon">📚</div>
+
+        <div class="brand-text">
+          <strong>Bookworm</strong>
+          <small>Library Lending System</small>
+        </div>
+      </div>
+
+      <!-- MEMBER NAVIGATION -->
+      <nav
+        *ngIf="role === 'MEMBER'"
+        class="sidebar-menu"
+        aria-label="Member navigation">
+
+        <div class="menu-label">MAIN MENU</div>
+
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="page === 'books'"
+          (click)="navigate('books')">
+          <span class="menu-icon">▦</span>
+          <span>Library</span>
+        </button>
+
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="page === 'dashboard'"
+          (click)="navigate('dashboard')">
+          <span class="menu-icon">⌂</span>
+          <span>Dashboard</span>
+        </button>
+
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="page === 'my-requests'"
+          (click)="navigate('my-requests')">
+          <span class="menu-icon">☷</span>
+          <span>My Requests</span>
+        </button>
+
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="page === 'reservations'"
+          (click)="navigate('reservations')">
+          <span class="menu-icon">▤</span>
+          <span>Reservations</span>
+        </button>
+
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="page === 'fines'"
+          (click)="navigate('fines')">
+          <span class="menu-icon">₹</span>
+          <span>Fines</span>
+        </button>
+
+      </nav>
+
+      <!-- LIBRARIAN NAVIGATION -->
+      <nav
+        *ngIf="role === 'LIBRARIAN'"
+        class="sidebar-menu"
+        aria-label="Librarian navigation">
+
+        <div class="menu-label">LIBRARIAN PANEL</div>
+
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="page === 'approvals'"
+          (click)="navigate('approvals')">
+          <span class="menu-icon">☑</span>
+          <span>Request Approvals</span>
+        </button>
+
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="page === 'books'"
+          (click)="navigate('books')">
+          <span class="menu-icon">▦</span>
+          <span>Book Catalogue</span>
+        </button>
+
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="page === 'manage-books'"
+          (click)="navigate('manage-books')">
+          <span class="menu-icon">✎</span>
+          <span>Manage Books</span>
+        </button>
+
+      </nav>
+
+      <!-- SIDEBAR FOOTER -->
+      <div class="sidebar-footer">
+
+        <div class="profile-card">
+          <div class="profile-avatar">
+            {{ role === 'LIBRARIAN' ? 'L' : 'M' }}
+          </div>
+
+          <div class="profile-info">
+            <strong>
+              {{ role === 'LIBRARIAN' ? 'Librarian' : 'Member' }}
+            </strong>
+
+            <small>
+              {{
+                role === 'LIBRARIAN'
+                  ? 'Library Management'
+                  : 'Library Account'
+              }}
+            </small>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="sidebar-logout"
+          (click)="logout()">
+          <span>⇥</span>
+          Logout
+        </button>
+
+      </div>
+
+    </aside>
+
+    <!-- RIGHT WORKSPACE -->
+    <div class="workspace-main">
+
+      <!-- TOP NAVIGATION BAR -->
+      <header class="topbar">
+
+        <div class="topbar-title">
+
+          <span class="topbar-brand">Bookworm</span>
+
+          <span class="topbar-divider">/</span>
+
+          <span>
+            {{
+              page === 'books' ? 'Library'
+              : page === 'dashboard' ? 'Dashboard'
+              : page === 'my-requests' ? 'My Requests'
+              : page === 'approvals' ? 'Request Approvals'
+              : page === 'manage-books' ? 'Manage Books'
+              : page === 'reservations' ? 'Reservations'
+              : page === 'fines' ? 'Fines'
+              : 'Library'
+            }}
+          </span>
+
+        </div>
+
+        <div class="topbar-actions">
+
+          <div class="topbar-role">
+            <span class="online-dot"></span>
+
+            {{
+              role === 'LIBRARIAN'
+                ? 'Librarian'
+                : 'Member'
+            }}
+          </div>
+
+          <button
+            type="button"
+            class="topbar-logout"
+            title="Logout"
+            aria-label="Logout"
+            (click)="logout()">
+            ⇥
+          </button>
+
+        </div>
+
+      </header>
+
+      <!-- ======================================
+           MAIN CONTENT
+           ====================================== -->
+
+      <main class="content-area">
+
+        <div
+          *ngIf="message"
+          class="message"
+          role="status">
+          {{ message }}
+        </div>
+
+        <!-- ====================================
+             BOOK CATALOGUE
+             ==================================== -->
+
+        <section
+          *ngIf="page === 'books'"
+          class="library-section">
+
+          <div class="section-heading">
+
+            <div>
+              <div class="eyebrow">
+                EXPLORE OUR COLLECTION
+              </div>
+
+              <h1>Library</h1>
+
+              <p class="section-subtitle">
+                Discover books, request available copies,
+                and reserve your next read.
+              </p>
+            </div>
+
+            <div class="collection-count">
+              {{ filteredBooks().length }} Books
+            </div>
+
+          </div>
+
+          <!-- SEARCH BAR -->
+          <div class="catalogue-toolbar">
+
+            <div class="catalogue-search">
+
+              <span
+                class="search-icon"
+                aria-hidden="true">
+                ⌕
+              </span>
+
+              <input
+                type="search"
+                name="search"
+                [(ngModel)]="search"
+                placeholder="Search by title or author..."
+                aria-label="Search books" />
+
+            </div>
+
+            <button
+              type="button"
+              class="refresh-btn"
+              title="Refresh catalogue"
+              aria-label="Refresh catalogue"
+              (click)="loadBooks()">
+              ↻
+            </button>
+
+          </div>
+
+          <div class="collection-header">
+
+            <h2>All Books</h2>
+
+            <span>
+              {{ filteredBooks().length }} titles
+            </span>
+
+          </div>
+
+          <!-- EMPTY BOOK RESULTS -->
+          <div
+            *ngIf="filteredBooks().length === 0"
+            class="empty-state">
+
+            <div class="empty-icon">📖</div>
+
+            <h3>No books found</h3>
+
+            <p>
+              Try searching with a different title or author.
+            </p>
+
+          </div>
+
+          <!-- ACTUAL BOOK COVER GRID -->
+          <div class="bookworm-grid">
+
+            <article
+              *ngFor="let book of filteredBooks()"
+              class="bookworm-book">
+
+              <div class="book-cover-area">
+
+                <img
+                  class="book-cover"
+                  [src]="bookCoverUrl(book)"
+                  [alt]="'Cover of ' + book.title"
+                  (error)="onBookCoverError($event)"
+                  loading="lazy" />
+
+                <span
+                  class="book-availability-badge"
+                  [class.unavailable]="book.available_copies <= 0">
+
+                  {{
+                    +book.available_copies > 0
+                      ? 'Available'
+                      : 'Unavailable'
+                  }}
+
+                </span>
+
+              </div>
+
+              <div class="book-info">
+
+                <h3
+                  class="book-title"
+                  [title]="book.title">
+                  {{ book.title }}
+                </h3>
+
+                <p class="book-author">
+                  {{ book.author }}
+                </p>
+
+                <div class="book-stats">
+
+                  <span>
+                    Available:
+                    <strong>
+                      {{ book.available_copies }}
+                    </strong>
+                  </span>
+
+                  <span>
+                    Held:
+                    <strong>
+                      {{ book.held_copies ?? 0 }}
+                    </strong>
+                  </span>
+
+                </div>
+
+                <!-- MEMBER BOOK ACTIONS -->
+                <div
+                  *ngIf="role === 'MEMBER'"
+                  class="book-actions">
+
+                  <button
+                    *ngIf="book.available_copies > 0"
+                    type="button"
+                    class="book-action-btn request-btn"
+                    (click)="checkout(book.id)">
+                    Request Book
+                  </button>
+
+                  <button
+                    *ngIf="book.available_copies <= 0"
+                    type="button"
+                    class="book-action-btn reserve-btn"
+                    (click)="reserveBook(book.id)">
+                    Reserve Book
+                  </button>
+
+                </div>
+
+                <!-- LIBRARIAN BOOK ACTION -->
+                <div
+                  *ngIf="role === 'LIBRARIAN'"
+                  class="book-actions">
+
+                  <button
+                    type="button"
+                    class="book-action-btn secondary-btn"
+                    (click)="navigate('manage-books')">
+                    Manage Book
+                  </button>
+
+                </div>
+
+              </div>
+
+            </article>
+
+          </div>
+
+        </section>
+
+        <!-- ====================================
+             MEMBER DASHBOARD
+             ==================================== -->
+
+        <section
+          *ngIf="role === 'MEMBER' && page === 'dashboard'"
+          class="dashboard-section">
+
+          <div class="section-heading">
+
+            <div>
+              <div class="eyebrow">
+                YOUR LIBRARY ACTIVITY
+              </div>
+
+              <h1>My Dashboard</h1>
+
+              <p class="section-subtitle">
+                Track borrowed books and your reading activity.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              class="refresh-btn"
+              title="Refresh dashboard"
+              aria-label="Refresh dashboard"
+              (click)="loadDashboard()">
+              ↻
+            </button>
+
+          </div>
+
+          <div *ngIf="dashboard">
+
+            <!-- DASHBOARD STATISTICS -->
+            <div class="stats-grid">
+
+              <div class="stat-card">
+
+                <div class="stat-icon">📖</div>
+
+                <span>Active Loans</span>
+
+                <strong>
+                  {{ dashboard.summary?.active_loans ?? 0 }}
+                </strong>
+
+              </div>
+
+              <div class="stat-card">
+
+                <div class="stat-icon">📚</div>
+
+                <span>Total Loans</span>
+
+                <strong>
+                  {{ dashboard.summary?.total_loans ?? 0 }}
+                </strong>
+
+              </div>
+
+              <div class="stat-card">
+
+                <div class="stat-icon">🔖</div>
+
+                <span>Reservations</span>
+
+                <strong>
+                  {{ dashboard.summary?.active_reservations ?? 0 }}
+                </strong>
+
+              </div>
+
+              <div class="stat-card">
+
+                <div class="stat-icon">₹</div>
+
+                <span>Outstanding Fines</span>
+
+                <strong>
+                  ₹{{ dashboard.summary?.outstanding_fines ?? 0 }}
+                </strong>
+
+              </div>
+
+            </div>
+
+            <!-- ACTIVE LOANS -->
+            <div class="content-panel">
+
+              <div class="panel-heading">
+                <h2>Currently Borrowed</h2>
+              </div>
+
+              <div
+                *ngIf="!dashboard.active_loans?.length"
+                class="empty-state">
+
+                <div class="empty-icon">📚</div>
+
+                <h3>No active loans</h3>
+
+                <p>
+                  Books you borrow will appear here.
+                </p>
+
+              </div>
+
+              <div class="record-grid">
+
+                <article
+                  *ngFor="let loan of dashboard.active_loans"
+                  class="record-card">
+
+                  <div class="record-icon">📖</div>
+
+                  <h3>
+                    {{ loan.book_title }}
+                  </h3>
+
+                  <span class="status-pill active">
+                    {{ loan.status }}
+                  </span>
+
+                  <p>
+                    Borrowed:
+                    {{ loan.borrowed_at | date:'mediumDate' }}
+                  </p>
+
+                  <p>
+                    Due Date:
+                    {{ loan.due_at | date:'mediumDate' }}
+                  </p>
+
+                  <button
+                    type="button"
+                    class="primary-action"
+                    (click)="returnBook(loan.loan_id)">
+                    Return Book
+                  </button>
+
+                </article>
+
+              </div>
+
+            </div>
+
+            <!-- LOAN HISTORY -->
+            <div class="content-panel">
+
+              <div class="panel-heading">
+                <h2>Loan History</h2>
+              </div>
+
+              <p
+                *ngIf="!dashboard.loan_history?.length"
+                class="empty-text">
+                No loan history available.
+              </p>
+
+              <div class="record-grid">
+
+                <article
+                  *ngFor="let loan of dashboard.loan_history"
+                  class="record-card">
+
+                  <div class="record-icon">📘</div>
+
+                  <h3>
+                    {{ loan.book_title }}
+                  </h3>
+
+                  <span class="status-pill">
+                    {{ loan.status }}
+                  </span>
+
+                  <p>
+                    Borrowed:
+                    {{ loan.borrowed_at | date:'mediumDate' }}
+                  </p>
+
+                  <p>
+                    Due:
+                    {{ loan.due_at | date:'mediumDate' }}
+                  </p>
+
+                  <p *ngIf="loan.returned_at">
+                    Returned:
+                    {{ loan.returned_at | date:'mediumDate' }}
+                  </p>
+
+                </article>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          <div
+            *ngIf="!dashboard"
+            class="empty-state">
+
+            <div class="empty-icon">📊</div>
+
+            <p>
+              Dashboard data is not available yet.
+            </p>
+
+          </div>
+
+        </section>
+
+        <!-- ====================================
+             MEMBER CHECKOUT REQUESTS
+             ==================================== -->
+
+        <section
+          *ngIf="role === 'MEMBER' && page === 'my-requests'">
+
+          <div class="section-heading">
+
+            <div>
+              <div class="eyebrow">
+                BORROWING ACTIVITY
+              </div>
+
+              <h1>My Requests</h1>
+
+              <p class="section-subtitle">
+                Track your book checkout requests.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              class="refresh-btn"
+              title="Refresh requests"
+              aria-label="Refresh requests"
+              (click)="loadMyCheckoutRequests()">
+              ↻
+            </button>
+
+          </div>
+
+          <div
+            *ngIf="myCheckoutRequests.length === 0"
+            class="empty-state">
+
+            <div class="empty-icon">📋</div>
+
+            <h3>No requests yet</h3>
+
+            <p>
+              Browse the library to request a book.
+            </p>
+
+            <button
+              type="button"
+              class="primary-action"
+              (click)="navigate('books')">
+              Explore Library
+            </button>
+
+          </div>
+
+          <div class="record-grid">
+
+            <article
+              *ngFor="let request of myCheckoutRequests"
+              class="record-card">
+
+              <div class="record-icon">📘</div>
+
+              <h3>
+                {{ request.book_title }}
+              </h3>
+
+              <span
+                class="status-pill"
+                [class.pending]="request.status === 'PENDING'"
+                [class.approved]="request.status === 'APPROVED'"
+                [class.rejected]="request.status === 'REJECTED'"
+                [class.cancelled]="request.status === 'CANCELLED'">
+                {{ request.status }}
+              </span>
+
+              <p>
+                Requested:
+                {{ request.created_at | date:'medium' }}
+              </p>
+
+              <p *ngIf="request.reviewed_at">
+                Updated:
+                {{ request.reviewed_at | date:'medium' }}
+              </p>
+
+              <button
+                *ngIf="request.status === 'PENDING'"
+                type="button"
+                class="danger-outline-btn"
+                (click)="cancelRequest(request.id)">
+                Cancel Request
+              </button>
+
+            </article>
+
+          </div>
+
+        </section>
+
+        <!-- ====================================
+             MEMBER RESERVATIONS
+             ==================================== -->
+
+        <section
+          *ngIf="role === 'MEMBER' && page === 'reservations'">
+
+          <div class="section-heading">
+
+            <div>
+              <div class="eyebrow">
+                YOUR WAITLIST
+              </div>
+
+              <h1>My Reservations</h1>
+
+              <p class="section-subtitle">
+                Manage reserved books and queue positions.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              class="refresh-btn"
+              title="Refresh reservations"
+              aria-label="Refresh reservations"
+              (click)="loadReservations()">
+              ↻
+            </button>
+
+          </div>
+
+          <div
+            *ngIf="reservations.length === 0"
+            class="empty-state">
+
+            <div class="empty-icon">🔖</div>
+
+            <h3>No reservations</h3>
+
+            <p>
+              Your reserved books will appear here.
+            </p>
+
+          </div>
+
+          <div class="record-grid">
+
+            <article
+              *ngFor="let reservation of reservations"
+              class="record-card">
+
+              <div class="record-icon">🔖</div>
+
+              <h3>
+                {{ reservation.book_title || 'Reserved Book' }}
+              </h3>
+
+              <span
+                class="status-pill"
+                [class.pending]="reservation.status === 'WAITING'"
+                [class.approved]="reservation.status === 'HELD'"
+                [class.cancelled]="reservation.status === 'CANCELLED'">
+                {{ reservation.status }}
+              </span>
+
+              <p>
+                Reserved:
+                {{ reservation.created_at | date:'medium' }}
+              </p>
+
+              <p *ngIf="reservation.hold_expires_at">
+                Hold Expires:
+                {{ reservation.hold_expires_at | date:'medium' }}
+              </p>
+
+              <div class="record-actions">
+
+                <button
+                  *ngIf="reservation.status === 'WAITING'"
+                  type="button"
+                  class="secondary-action"
+                  (click)="viewQueuePosition(reservation.id)">
+                  Queue Position
+                </button>
+
+                <button
+                  *ngIf="
+                    reservation.status === 'WAITING' ||
+                    reservation.status === 'HELD'
+                  "
+                  type="button"
+                  class="danger-outline-btn"
+                  (click)="cancelReservation(reservation.id)">
+                  Cancel Reservation
+                </button>
+
+              </div>
+
+            </article>
+
+          </div>
+
+        </section>
+
+        <!-- ====================================
+             MEMBER FINES
+             ==================================== -->
+
+        <section
+          *ngIf="role === 'MEMBER' && page === 'fines'">
+
+          <div class="section-heading">
+
+            <div>
+              <div class="eyebrow">
+                PAYMENT HISTORY
+              </div>
+
+              <h1>My Fines</h1>
+
+              <p class="section-subtitle">
+                View outstanding fines and demo payments.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              class="refresh-btn"
+              title="Refresh fines"
+              aria-label="Refresh fines"
+              (click)="loadFines()">
+              ↻
+            </button>
+
+          </div>
+
+          <div class="info-banner">
+            Demo payments only. No real money will be collected.
+          </div>
+
+          <div
+            *ngIf="fines.length === 0"
+            class="empty-state">
+
+            <div class="empty-icon">✓</div>
+
+            <h3>No fines</h3>
+
+            <p>
+              You currently have no fines to display.
+            </p>
+
+          </div>
+
+          <div class="record-grid">
+
+            <article
+              *ngFor="let fine of fines"
+              class="record-card">
+
+              <div class="record-icon">₹</div>
+
+              <h3>Library Fine</h3>
+
+              <p>
+                Total:
+                <strong>
+                  ₹{{ fine.amount }}
+                </strong>
+              </p>
+
+              <p>
+                Paid:
+                <strong>
+                  ₹{{ fine.paid_amount }}
+                </strong>
+              </p>
+
+              <p>
+                Outstanding:
+                <strong>
+                  ₹{{ fine.outstanding_amount }}
+                </strong>
+              </p>
+
+              <button
+                *ngIf="fine.outstanding_amount > 0"
+                type="button"
+                class="primary-action"
+                (click)="demoPayFine(fine.id)">
+                Pay Fine (Demo)
+              </button>
+
+              <span
+                *ngIf="fine.outstanding_amount <= 0"
+                class="status-pill approved">
+                Paid
+              </span>
+
+            </article>
+
+          </div>
+
+        </section>
+
+        <!-- ====================================
+             LIBRARIAN REQUEST APPROVALS
+             ==================================== -->
+
+        <section
+          *ngIf="role === 'LIBRARIAN' && page === 'approvals'">
+
+          <div class="section-heading">
+
+            <div>
+              <div class="eyebrow">
+                LIBRARY MANAGEMENT
+              </div>
+
+              <h1>Request Approvals</h1>
+
+              <p class="section-subtitle">
+                Review and manage member checkout requests.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              class="refresh-btn"
+              title="Refresh approvals"
+              aria-label="Refresh approvals"
+              (click)="loadCheckoutRequests()">
+              ↻
+            </button>
+
+          </div>
+
+          <div
+            *ngIf="checkoutRequests.length === 0"
+            class="empty-state">
+
+            <div class="empty-icon">📋</div>
+
+            <h3>No requests available</h3>
+
+            <p>
+              Member checkout requests will appear here.
+            </p>
+
+          </div>
+
+          <div class="record-grid">
+
+            <article
+              *ngFor="let request of checkoutRequests"
+              class="record-card">
+
+              <div class="record-icon">📖</div>
+
+              <h3>
+                {{ request.book_title }}
+              </h3>
+
+              <p>
+                <strong>Member:</strong>
+                {{ request.member_name }}
+              </p>
+
+              <span
+                class="status-pill"
+                [class.pending]="request.status === 'PENDING'"
+                [class.approved]="request.status === 'APPROVED'"
+                [class.rejected]="request.status === 'REJECTED'"
+                [class.cancelled]="request.status === 'CANCELLED'">
+                {{ request.status }}
+              </span>
+
+              <p>
+                Requested:
+                {{ request.created_at | date:'medium' }}
+              </p>
+
+              <p *ngIf="request.reviewed_at">
+                Reviewed:
+                {{ request.reviewed_at | date:'medium' }}
+              </p>
+
+              <div
+                *ngIf="request.status === 'PENDING'"
+                class="record-actions">
+
+                <button
+                  type="button"
+                  class="primary-action"
+                  (click)="approveRequest(request.id)">
+                  Approve
+                </button>
+
+                <button
+                  type="button"
+                  class="danger-outline-btn"
+                  (click)="rejectRequest(request.id)">
+                  Reject
+                </button>
+
+              </div>
+
+            </article>
+
+          </div>
+
+        </section>
+
+        <!-- ====================================
+             LIBRARIAN BOOK MANAGEMENT
+             ==================================== -->
+
+        <section
+          *ngIf="role === 'LIBRARIAN' && page === 'manage-books'">
+
+          <div class="section-heading">
+
+            <div>
+              <div class="eyebrow">
+                CATALOGUE MANAGEMENT
+              </div>
+
+              <h1>Manage Books</h1>
+
+              <p class="section-subtitle">
+                Add books, edit information, and manage copies.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              class="refresh-btn"
+              title="Refresh books"
+              aria-label="Refresh books"
+              (click)="loadBooks()">
+              ↻
+            </button>
+
+          </div>
+
+          <!-- ADD NEW BOOK -->
+          <div class="content-panel">
+
+            <div class="panel-heading">
+              <h2>Add New Book</h2>
+            </div>
+
+            <form
+              class="book-management-form"
+              (ngSubmit)="addBook()">
+
+              <div class="form-field">
+
+                <label for="newBookTitle">
+                  Book Title
+                </label>
+
+                <input
+                  id="newBookTitle"
+                  type="text"
+                  name="newBookTitle"
+                  [(ngModel)]="newBook.title"
+                  placeholder="Enter book title"
+                  required />
+
+              </div>
+
+              <div class="form-field">
+
+                <label for="newBookAuthor">
+                  Author
+                </label>
+
+                <input
+                  id="newBookAuthor"
+                  type="text"
+                  name="newBookAuthor"
+                  [(ngModel)]="newBook.author"
+                  placeholder="Enter author name"
+                  required />
+
+              </div>
+
+              <div class="form-field">
+
+                <label for="newBookCopies">
+                  Initial Copies
+                </label>
+
+                <input
+                  id="newBookCopies"
+                  type="number"
+                  name="newBookCopies"
+                  min="1"
+                  step="1"
+                  [(ngModel)]="newBook.total_copies"
+                  required />
+
+              </div>
+
+              <button
+                type="submit"
+                class="primary-action">
+                + Add Book
+              </button>
+
+            </form>
+
+          </div>
+
+          <!-- EXISTING BOOKS -->
+          <div class="content-panel">
+
+            <div class="panel-heading">
+
+              <h2>Existing Books</h2>
+
+              <span>
+                {{ books.length }} books
+              </span>
+
+            </div>
+
+            <div
+              *ngIf="books.length === 0"
+              class="empty-state">
+
+              <div class="empty-icon">📚</div>
+
+              <h3>No books available</h3>
+
+              <p>
+                Add a new book to start your catalogue.
+              </p>
+
+            </div>
+
+            <div class="management-grid">
+
+              <article
+                *ngFor="let book of books"
+                class="management-card">
+
+                <div class="management-book-top">
+
+                  <img
+                    class="management-cover"
+                    [src]="bookCoverUrl(book)"
+                    [alt]="'Cover of ' + book.title"
+                    (error)="onBookCoverError($event)"
+                    loading="lazy" />
+
+                  <div>
+
+                    <h3>
+                      {{ book.title }}
+                    </h3>
+
+                    <p>
+                      {{ book.author }}
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <div class="book-stats">
+
+                  <span>
+                    Available:
+                    <strong>
+                      {{ book.available_copies }}
+                    </strong>
+                  </span>
+
+                  <span>
+                    Held:
+                    <strong>
+                      {{ book.held_copies ?? 0 }}
+                    </strong>
+                  </span>
+
+                </div>
+
+                <div class="record-actions">
+
+                  <button
+                    type="button"
+                    class="secondary-action"
+                    (click)="startEditBook(book)">
+                    Edit Book
+                  </button>
+
+                  <button
+                    type="button"
+                    class="primary-action"
+                    (click)="startAddCopies(book.id)">
+                    + Copies
+                  </button>
+
+                </div>
+
+                <!-- EDIT BOOK FORM -->
+                <div
+                  *ngIf="editingBookId === book.id"
+                  class="inline-editor">
+
+                  <h4>Edit Book Details</h4>
+
+                  <input
+                    type="text"
+                    [(ngModel)]="editBook.title"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Book title"
+                    aria-label="Edit book title" />
+
+                  <input
+                    type="text"
+                    [(ngModel)]="editBook.author"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Author"
+                    aria-label="Edit book author" />
+
+                  <div class="record-actions">
+
+                    <button
+                      type="button"
+                      class="primary-action"
+                      (click)="saveBook()">
+                      Save Changes
+                    </button>
+
+                    <button
+                      type="button"
+                      class="secondary-action"
+                      (click)="cancelEditBook()">
+                      Cancel
+                    </button>
+
+                  </div>
+
+                </div>
+
+                <!-- ADD COPIES FORM -->
+                <div
+                  *ngIf="copiesBookId === book.id"
+                  class="inline-editor">
+
+                  <h4>Add Physical Copies</h4>
+
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    [(ngModel)]="copiesQuantity"
+                    [ngModelOptions]="{standalone: true}"
+                    aria-label="Number of copies to add" />
+
+                  <div class="record-actions">
+
+                    <button
+                      type="button"
+                      class="primary-action"
+                      (click)="addCopies()">
+                      Add Copies
+                    </button>
+
+                    <button
+                      type="button"
+                      class="secondary-action"
+                      (click)="cancelAddCopies()">
+                      Cancel
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </article>
+
+            </div>
+
+          </div>
+
+        </section>
+
+      </main>
+
+    </div>
+
+  </div>
+
+  <!-- ==========================================
+       RESTORING SESSION
+       ========================================== -->
+
+  <main
+    *ngIf="restoringSession"
+    class="auth-page">
+
+    <div class="auth-card">
+
+      <div class="auth-logo">📚</div>
+
+      <h2>Bookworm</h2>
+
+      <p>
+        Restoring your library session...
+      </p>
+
+    </div>
+
+  </main>
+
+  <!-- ==========================================
+       AUTHENTICATION PAGES
+       ========================================== -->
+
+  <main
+    *ngIf="!token && !restoringSession"
+    class="auth-page">
+
+    <div class="auth-card">
+
+      <!-- AUTH BRAND -->
+      <div class="auth-brand">
+
+        <div class="auth-logo">📚</div>
+
+        <h2>Bookworm</h2>
+
+        <p>Library Lending System</p>
+
+      </div>
+
+      <!-- ======================================
+           LOGIN
+           ====================================== -->
+
+      <div *ngIf="authView === 'login'">
+
+        <h1>Welcome Back</h1>
+
+        <p class="auth-subtitle">
+          Sign in to your library account.
+        </p>
+
+        <form (ngSubmit)="login()">
+
+          <label for="loginEmail">
+            Email Address
+          </label>
+
+          <input
+            id="loginEmail"
+            type="email"
+            name="loginEmail"
+            [(ngModel)]="email"
+            placeholder="Enter your email"
+            autocomplete="email"
+            required />
+
+          <label for="loginPassword">
+            Password
+          </label>
+
+          <input
+            id="loginPassword"
+            type="password"
+            name="loginPassword"
+            [(ngModel)]="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            required />
+
+          <button
+            type="submit"
+            class="auth-submit"
+            [disabled]="loading">
+
+            {{
+              loading
+                ? 'Signing in...'
+                : 'Sign In'
+            }}
+
+          </button>
+
+        </form>
+
+        <p class="auth-link">
+
+          <a
+            href="#"
+            (click)="
+              $event.preventDefault();
+              changeAuthView('forgot')
+            ">
+            Forgot Password?
+          </a>
+
+        </p>
+
+        <p class="auth-link">
+
+          New to Bookworm?
+
+          <a
+            href="#"
+            (click)="
+              $event.preventDefault();
+              changeAuthView('register')
+            ">
+            Create Account
+          </a>
+
+        </p>
+
+      </div>
+
+      <!-- ======================================
+           REGISTRATION
+           ====================================== -->
+
+      <div *ngIf="authView === 'register'">
+
+        <h1>Create Account</h1>
+
+        <p class="auth-subtitle">
+          Join our library community.
+        </p>
+
+        <form (ngSubmit)="registerMember()">
+
+          <label for="registerName">
+            Full Name
+          </label>
+
+          <input
+            id="registerName"
+            type="text"
+            name="registerName"
+            [(ngModel)]="registration.name"
+            placeholder="Your full name"
+            autocomplete="name"
+            required />
+
+          <label for="registerEmail">
+            Email Address
+          </label>
+
+          <input
+            id="registerEmail"
+            type="email"
+            name="registerEmail"
+            [(ngModel)]="registration.email"
+            placeholder="Your email address"
+            autocomplete="email"
+            required />
+
+          <label for="registerPassword">
+            Password
+          </label>
+
+          <input
+            id="registerPassword"
+            type="password"
+            name="registerPassword"
+            [(ngModel)]="registration.password"
+            placeholder="Create password"
+            autocomplete="new-password"
+            minlength="8"
+            required />
+
+          <label for="registerConfirm">
+            Confirm Password
+          </label>
+
+          <input
+            id="registerConfirm"
+            type="password"
+            name="registerConfirmPassword"
+            [(ngModel)]="registration.confirmPassword"
+            placeholder="Confirm password"
+            autocomplete="new-password"
+            required />
+
+          <p class="password-hint">
+            Use uppercase, lowercase, number and special character.
+          </p>
+
+          <button
+            type="submit"
+            class="auth-submit"
+            [disabled]="loading">
+
+            {{
+              loading
+                ? 'Creating Account...'
+                : 'Register'
+            }}
+
+          </button>
+
+        </form>
+
+        <p class="auth-link">
+
+          Already have an account?
+
+          <a
+            href="#"
+            (click)="
+              $event.preventDefault();
+              changeAuthView('login')
+            ">
+            Sign In
+          </a>
+
+        </p>
+
+      </div>
+
+      <!-- ======================================
+           EMAIL OTP VERIFICATION
+           ====================================== -->
+
+      <div *ngIf="authView === 'verify'">
+
+        <h1>Verify Email</h1>
+
+        <p class="auth-subtitle">
+
+          Enter the OTP sent to
+
+          <strong>
+            {{ registrationEmail }}
+          </strong>.
+
+        </p>
+
+        <form (ngSubmit)="verifyRegistrationOtp()">
+
+          <label for="verificationOtp">
+            Verification Code
+          </label>
+
+          <input
+            id="verificationOtp"
+            type="text"
+            name="verificationOtp"
+            [(ngModel)]="verificationOtp"
+            placeholder="6-digit OTP"
+            maxlength="6"
+            pattern="[0-9]{6}"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            required />
+
+          <button
+            type="submit"
+            class="auth-submit"
+            [disabled]="loading">
+
+            {{
+              loading
+                ? 'Verifying...'
+                : 'Verify Email'
+            }}
+
+          </button>
+
+        </form>
+
+        <button
+          type="button"
+          class="secondary-action"
+          [disabled]="loading"
+          (click)="resendRegistrationOtp()">
+          Resend OTP
+        </button>
+
+        <p class="auth-link">
+
+          <a
+            href="#"
+            (click)="
+              $event.preventDefault();
+              changeAuthView('login')
+            ">
+            Back to Login
+          </a>
+
+        </p>
+
+      </div>
+
+      <!-- ======================================
+           MEMBERSHIP DEMO PAYMENT
+           ====================================== -->
+
+      <div *ngIf="authView === 'payment'">
+
+        <h1>Activate Membership</h1>
+
+        <p class="auth-subtitle">
+          Complete your one-time demo registration payment.
+        </p>
+
+        <div class="membership-fee">
+
+          <span>Registration Fee</span>
+
+          <strong>₹100.00</strong>
+
+        </div>
+
+        <h3>Choose Payment Method</h3>
+
+        <div class="payment-options">
+
+          <label class="payment-option">
+
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="UPI"
+              [(ngModel)]="paymentMethod"
+              [disabled]="loading" />
+
+            UPI (Demo)
+
+          </label>
+
+          <label class="payment-option">
+
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="CARD"
+              [(ngModel)]="paymentMethod"
+              [disabled]="loading" />
+
+            Debit / Credit Card (Demo)
+
+          </label>
+
+          <label class="payment-option">
+
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="NET_BANKING"
+              [(ngModel)]="paymentMethod"
+              [disabled]="loading" />
+
+            Net Banking (Demo)
+
+          </label>
+
+        </div>
+
+        <p class="demo-note">
+          Simulated payment only. No real money will be
+          collected. Do not enter banking credentials.
+        </p>
+
+        <button
+          type="button"
+          class="auth-submit"
+          [disabled]="loading"
+          (click)="payRegistrationFee()">
+
+          {{
+            loading
+              ? 'Processing...'
+              : 'Pay ₹100 (Demo)'
+          }}
+
+        </button>
+
+      </div>
+
+      <!-- ======================================
+           PAYMENT SUCCESS
+           ====================================== -->
+
+      <div
+        *ngIf="
+          authView === 'payment-success' &&
+          paymentReceipt
+        "
+        class="payment-success-page">
+
+        <div class="success-icon">✓</div>
+
+        <h1>Membership Activated!</h1>
+
+        <p class="auth-subtitle">
+          Your demo payment was successful.
+        </p>
+
+        <div class="receipt-details">
+
+          <p>
+            <strong>Member ID</strong>
+
+            <span>
+              {{ paymentReceipt.member_id }}
+            </span>
+          </p>
+
+          <p>
+            <strong>Receipt Number</strong>
+
+            <span>
+              {{ paymentReceipt.receipt_number }}
+            </span>
+          </p>
+
+          <p>
+            <strong>Payment ID</strong>
+
+            <span>
+              {{ paymentReceipt.payment_id }}
+            </span>
+          </p>
+
+          <p>
+            <strong>Method</strong>
+
+            <span>
+              {{ paymentReceipt.payment_method }}
+            </span>
+          </p>
+
+          <p>
+            <strong>Amount</strong>
+
+            <span>
+              {{ paymentReceipt.amount | currency:'INR' }}
+            </span>
+          </p>
+
+          <p>
+            <strong>Status</strong>
+
+            <span>
+              {{ paymentReceipt.payment_status }}
+            </span>
+          </p>
+
+        </div>
+
+        <p
+          *ngIf="paymentReceipt.receipt_email_sent"
+          class="email-success">
+
+          Receipt email submitted to
+          {{ registrationEmail }}.
+
+        </p>
+
+        <p
+          *ngIf="!paymentReceipt.receipt_email_sent"
+          class="email-warning">
+
+          Membership activated, but the receipt email
+          could not be sent.
+
+        </p>
+
+        <p class="demo-note">
+          Demo transaction — no real money collected.
+        </p>
+
+        <button
+          type="button"
+          class="auth-submit"
+          (click)="goToLoginAfterPayment()">
+          Continue to Login
+        </button>
+
+      </div>
+
+      <!-- ======================================
+           FORGOT PASSWORD
+           ====================================== -->
+
+      <div *ngIf="authView === 'forgot'">
+
+        <h1>Forgot Password?</h1>
+
+        <p class="auth-subtitle">
+          Enter your email to receive a password reset OTP.
+        </p>
+
+        <form (ngSubmit)="requestPasswordReset()">
+
+          <label for="resetEmail">
+            Email Address
+          </label>
+
+          <input
+            id="resetEmail"
+            type="email"
+            name="resetEmail"
+            [(ngModel)]="resetEmail"
+            placeholder="Registered email"
+            autocomplete="email"
+            required />
+
+          <button
+            type="submit"
+            class="auth-submit"
+            [disabled]="loading">
+
+            {{
+              loading
+                ? 'Sending...'
+                : 'Send OTP'
+            }}
+
+          </button>
+
+        </form>
+
+        <p class="auth-link">
+
+          <a
+            href="#"
+            (click)="
+              $event.preventDefault();
+              changeAuthView('login')
+            ">
+            Back to Login
+          </a>
+
+        </p>
+
+      </div>
+
+      <!-- ======================================
+           RESET PASSWORD
+           ====================================== -->
+
+      <div *ngIf="authView === 'reset'">
+
+        <h1>Reset Password</h1>
+
+        <p class="auth-subtitle">
+          Enter the OTP sent to {{ resetEmail }}.
+        </p>
+
+        <form (ngSubmit)="submitPasswordReset()">
+
+          <label for="resetOtp">
+            OTP
+          </label>
+
+          <input
+            id="resetOtp"
+            type="text"
+            name="resetOtp"
+            [(ngModel)]="resetOtp"
+            placeholder="6-digit OTP"
+            maxlength="6"
+            pattern="[0-9]{6}"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            required />
+
+          <label for="newPassword">
+            New Password
+          </label>
+
+          <input
+            id="newPassword"
+            type="password"
+            name="newPassword"
+            [(ngModel)]="newPassword"
+            placeholder="New password"
+            autocomplete="new-password"
+            minlength="8"
+            required />
+
+          <label for="confirmNewPassword">
+            Confirm Password
+          </label>
+
+          <input
+            id="confirmNewPassword"
+            type="password"
+            name="confirmNewPassword"
+            [(ngModel)]="confirmNewPassword"
+            placeholder="Confirm new password"
+            autocomplete="new-password"
+            required />
+
+          <button
+            type="submit"
+            class="auth-submit"
+            [disabled]="loading">
+
+            {{
+              loading
+                ? 'Resetting...'
+                : 'Reset Password'
+            }}
+
+          </button>
+
+        </form>
+
+        <p class="auth-link">
+
+          <a
+            href="#"
+            (click)="
+              $event.preventDefault();
+              changeAuthView('login')
+            ">
+            Back to Login
+          </a>
+
+        </p>
+
+      </div>
+
+      <!-- ======================================
+           AUTHENTICATION MESSAGES
+           ====================================== -->
+
+      <p
+        *ngIf="authNotice"
+        class="message"
+        role="status">
+        {{ authNotice }}
+      </p>
+
+      <p
+        *ngIf="authError"
+        class="message auth-error"
+        role="alert">
+        {{ authError }}
+      </p>
+
+      <p
+        *ngIf="message"
+        class="message"
+        role="status">
+        {{ message }}
+      </p>
+
+    </div>
+
+  </main>
+
+</div>
