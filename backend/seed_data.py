@@ -1,6 +1,5 @@
 
 from datetime import datetime, timedelta, timezone
-from uuid import uuid4
 
 from sqlalchemy import select, func
 
@@ -9,7 +8,12 @@ from models.book import Book
 from models.book_copy import BookCopy
 from models.loan import Loan
 from models.user import User
+from core.security import hash_password
 
+
+# --------------------------------------------------
+# 1. BOOK SEED DATA
+# --------------------------------------------------
 
 BOOK_DATA = [
     ("Clean Code", "Robert C. Martin"),
@@ -55,73 +59,130 @@ BOOK_DATA = [
 ]
 
 
+# --------------------------------------------------
+# 2. MEMBER SEED DATA
+# --------------------------------------------------
+
+MEMBER_DATA = [
+    ("Ananya", "ananya.seed@example.com"),
+    ("Rohit", "rohit.seed@example.com"),
+    ("Meera", "meera.seed@example.com"),
+    ("Arjun", "arjun.seed@example.com"),
+    ("Priya", "priya.seed@example.com"),
+    ("Karthik", "karthik.seed@example.com"),
+    ("Divya", "divya.seed@example.com"),
+    ("Rahul", "rahul.seed@example.com"),
+    ("Sneha", "sneha.seed@example.com"),
+    ("Vikram", "vikram.seed@example.com"),
+]
+
+
+# --------------------------------------------------
+# 3. SEED BOOKS
+# --------------------------------------------------
+
 def seed_books(db):
-    existing_count = db.scalar(select(func.count(Book.id)))
+
+    existing_count = db.scalar(
+        select(func.count(Book.id))
+    )
+
+    added = 0
 
     for title, author in BOOK_DATA:
-        exists = db.scalar(
-            select(Book.id).where(Book.title == title)
-        )
-        if exists:
-            continue
 
         if existing_count >= 40:
             break
+
+        exists = db.scalar(
+            select(Book.id).where(Book.title == title)
+        )
+
+        if exists is not None:
+            continue
 
         book = Book(
             title=title,
             author=author,
             total_copies=2,
         )
+
         db.add(book)
         db.flush()
 
         db.add_all([
-            BookCopy(book_id=book.id, status="AVAILABLE"),
-            BookCopy(book_id=book.id, status="AVAILABLE"),
+            BookCopy(
+                book_id=book.id,
+                status="AVAILABLE",
+            ),
+            BookCopy(
+                book_id=book.id,
+                status="AVAILABLE",
+            ),
         ])
-        existing_count += 1
 
+        existing_count += 1
+        added += 1
+
+    print(f"New books added: {added}")
+
+
+# --------------------------------------------------
+# 4. SEED MEMBERS
+# --------------------------------------------------
 
 def seed_members(db):
-    members = [
-        ("Ananya", "ananya.seed@example.com"),
-        ("Rohit", "rohit.seed@example.com"),
-        ("Meera", "meera.seed@example.com"),
-    ]
 
     existing_count = db.scalar(
-        select(func.count(User.id)).where(User.role == "MEMBER")
+        select(func.count(User.id)).where(
+            User.role == "MEMBER"
+        )
     )
 
-    # Reuse the application's own password hashing implementation.
-    from core.security import hash_password
+    added = 0
 
-    for name, email in members:
+    for name, email in MEMBER_DATA:
+
         if existing_count >= 10:
             break
 
         exists = db.scalar(
             select(User.id).where(User.email == email)
         )
-        if exists:
+
+        if exists is not None:
             continue
 
-        db.add(User(
+        member = User(
             name=name,
             email=email,
             password_hash=hash_password("Member@123"),
             role="MEMBER",
             is_active=True,
-        ))
-        existing_count += 1
+        )
 
+        db.add(member)
+
+        existing_count += 1
+        added += 1
+
+    print(f"New members added: {added}")
+
+
+# --------------------------------------------------
+# 5. SEED LOANS
+# --------------------------------------------------
 
 def seed_loans(db):
-    existing_count = db.scalar(select(func.count(Loan.id)))
+
+    existing_count = db.scalar(
+        select(func.count(Loan.id))
+    )
+
     missing = max(0, 25 - existing_count)
 
     if missing == 0:
+        print("Loan target already reached.")
         return
 
     members = db.scalars(
@@ -130,7 +191,6 @@ def seed_loans(db):
         .order_by(User.email)
     ).all()
 
-    # Only use new books with available copies.
     copies = db.scalars(
         select(BookCopy)
         .join(Book, BookCopy.book_id == Book.id)
@@ -141,36 +201,136 @@ def seed_loans(db):
         .order_by(Book.title, BookCopy.id)
     ).all()
 
-    if not members or len(copies) < missing:
+    if not members:
         raise RuntimeError(
-            "Insufficient members or available copies for seed loans."
+            "No members available for seeding loans."
+        )
+
+    if len(copies) < missing:
+        raise RuntimeError(
+            "Insufficient available book copies."
         )
 
     now = datetime.now(timezone.utc)
 
+    added = 0
+
     for index, copy in enumerate(copies[:missing]):
+
         member = members[index % len(members)]
 
-        # Seed historical returned loans so existing borrowing limits,
-        # fine restrictions, and reservations remain unaffected.
-        borrowed_at = now - timedelta(days=40 + index)
-        due_at = borrowed_at + timedelta(days=14)
-        returned_at = borrowed_at + timedelta(days=7)
+        borrowed_at = now - timedelta(
+            days=40 + index
+        )
 
-        db.add(Loan(
+        due_at = borrowed_at + timedelta(days=14)
+
+        # First five newly seeded loans are
+        # historical late returns.
+        if index < 5:
+            returned_at = due_at + timedelta(days=3)
+
+        # Remaining loans were returned early.
+        else:
+            returned_at = borrowed_at + timedelta(days=7)
+
+        loan = Loan(
             user_id=member.id,
             copy_id=copy.id,
             borrowed_at=borrowed_at,
             due_at=due_at,
             returned_at=returned_at,
             status="RETURNED",
-        ))
+        )
 
+        db.add(loan)
+        added += 1
+
+    print(f"New loans added: {added}")
+
+
+# --------------------------------------------------
+# 6. VERIFY SEED DATA
+# --------------------------------------------------
+
+def verify_seed_data(db):
+
+    book_count = db.scalar(
+        select(func.count(Book.id))
+    )
+
+    member_count = db.scalar(
+        select(func.count(User.id)).where(
+            User.role == "MEMBER"
+        )
+    )
+
+    loan_count = db.scalar(
+        select(func.count(Loan.id))
+    )
+
+    historical_late_returns = db.scalar(
+        select(func.count(Loan.id)).where(
+            Loan.returned_at.is_not(None),
+            Loan.returned_at > Loan.due_at,
+        )
+    )
+
+    active_overdue_loans = db.scalar(
+        select(func.count(Loan.id)).where(
+            Loan.status == "ACTIVE",
+            Loan.due_at < datetime.now(timezone.utc),
+        )
+    )
+
+    print("\n" + "=" * 45)
+    print("LIBRARY SEED DATA VERIFICATION")
+    print("=" * 45)
+
+    print(f"Books: {book_count} (target: 40)")
+    print(f"Members: {member_count} (target: 10)")
+    print(f"Loans: {loan_count} (target: 25)")
+
+    print(
+        f"Historical late returns: "
+        f"{historical_late_returns}"
+    )
+
+    print(
+        f"Active overdue loans: "
+        f"{active_overdue_loans}"
+    )
+
+    print("=" * 45)
+
+    if (
+        book_count >= 40
+        and member_count >= 10
+        and loan_count >= 25
+    ):
+        print("Seed count requirements satisfied.")
+    else:
+        print("Some seed count requirements are missing.")
+
+    if historical_late_returns == 0 and active_overdue_loans == 0:
+        print(
+            "WARNING: No overdue examples found. "
+            "Existing loans may already occupy all 25 slots."
+        )
+
+
+# --------------------------------------------------
+# 7. MAIN FUNCTION
+# --------------------------------------------------
 
 def main():
+
     db = SessionLocal()
 
     try:
+
+        print("\nStarting library seed process...\n")
+
         seed_books(db)
         db.flush()
 
@@ -178,26 +338,24 @@ def main():
         db.flush()
 
         seed_loans(db)
+        db.flush()
+
         db.commit()
 
-        print("Seed data completed successfully!")
+        print("\nSeed data completed successfully!")
 
-        print("Books:", db.scalar(select(func.count(Book.id))))
-        print(
-            "Members:",
-            db.scalar(
-                select(func.count(User.id))
-                .where(User.role == "MEMBER")
-            ),
-        )
-        print("Loans:", db.scalar(select(func.count(Loan.id))))
+        verify_seed_data(db)
 
     except Exception as error:
+
         db.rollback()
-        print("Seed failed:", error)
+
+        print(f"\nSeed failed: {error}")
+
         raise
 
     finally:
+
         db.close()
 
 
