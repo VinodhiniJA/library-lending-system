@@ -76,6 +76,10 @@ export class App implements OnInit, OnDestroy {
   books: any[] = [];
   dashboard: any = null;
   reservations: any[] = [];
+
+  // Librarian Reservations Management
+  librarianReservations: any[] = [];
+
   fines: any[] = [];
   checkoutRequests: any[] = [];
   myCheckoutRequests: any[] = [];
@@ -459,6 +463,10 @@ export class App implements OnInit, OnDestroy {
     });
   }
 
+  // ============================================
+  // INITIALIZE SESSION
+  // ============================================
+
   private initializeSession(): void {
     this.http.get<any>(
       `${this.API}/auth/me`
@@ -538,6 +546,7 @@ export class App implements OnInit, OnDestroy {
     this.books = [];
     this.dashboard = null;
     this.reservations = [];
+    this.librarianReservations = [];
     this.fines = [];
     this.checkoutRequests = [];
     this.myCheckoutRequests = [];
@@ -560,11 +569,14 @@ export class App implements OnInit, OnDestroy {
 
       this.loadBooks(true);
 
-      if (
-        this.role === 'LIBRARIAN' &&
-        this.page === 'approvals'
-      ) {
-        this.loadCheckoutRequests(true);
+      if (this.role === 'LIBRARIAN') {
+        if (this.page === 'approvals') {
+          this.loadCheckoutRequests(true);
+        }
+
+        if (this.page === 'librarian-reservations') {
+          this.loadLibrarianReservations(true);
+        }
       }
 
       if (this.role === 'MEMBER') {
@@ -596,12 +608,18 @@ export class App implements OnInit, OnDestroy {
 
   navigate(page: string): void {
     const librarianPages = [
-      'approvals', 'books', 'manage-books'
+      'approvals',
+      'books',
+      'manage-books',
+      'librarian-reservations'
     ];
 
     const memberPages = [
-      'books', 'dashboard', 'my-requests',
-      'reservations', 'fines'
+      'books',
+      'dashboard',
+      'my-requests',
+      'reservations',
+      'fines'
     ];
 
     if (
@@ -633,6 +651,10 @@ export class App implements OnInit, OnDestroy {
 
       case 'approvals':
         this.loadCheckoutRequests();
+        break;
+
+      case 'librarian-reservations':
+        this.loadLibrarianReservations();
         break;
 
       case 'reservations':
@@ -778,6 +800,32 @@ export class App implements OnInit, OnDestroy {
   }
 
   // ============================================
+  // LIBRARIAN: VIEW ALL RESERVATIONS
+  // ============================================
+
+  loadLibrarianReservations(silent = false): void {
+    if (this.role !== 'LIBRARIAN') return;
+
+    this.http.get<any[]>(
+      `${this.API}/reservations/librarian/all`
+    ).subscribe({
+      next: data => {
+        this.librarianReservations = data;
+        this.cdr.detectChanges();
+      },
+      error: err => {
+        if (!silent) {
+          this.message = this.errorText(
+            err,
+            'Unable to load librarian reservations.'
+          );
+          this.cdr.detectChanges();
+        }
+      }
+    });
+  }
+
+  // ============================================
   // LIBRARIAN: LOAD APPROVAL REQUESTS
   // ============================================
 
@@ -864,28 +912,6 @@ export class App implements OnInit, OnDestroy {
         this.message =
           this.errorText(err, 'Unable to load dashboard.');
         this.cdr.detectChanges();
-      }
-    });
-  }
-
-  // ============================================
-  // RETURN BOOK
-  // ============================================
-
-  returnBook(loanId: string): void {
-    if (this.role !== 'MEMBER') return;
-
-    this.http.post<any>(
-      `${this.API}/loans/${loanId}/return`,
-      {}
-    ).subscribe({
-      next: () => {
-        alert('Book returned successfully!');
-        this.loadDashboard();
-        this.loadBooks();
-      },
-      error: err => {
-        alert(this.errorText(err, 'Return failed.'));
       }
     });
   }
@@ -1310,7 +1336,6 @@ export class App implements OnInit, OnDestroy {
 
   // ============================================
   // BOOK COVER LOOKUP
-  // REAL COVER FIRST, CUSTOM FALLBACK SECOND
   // ============================================
 
   bookCoverUrl(book: any): string {
@@ -1328,8 +1353,6 @@ export class App implements OnInit, OnDestroy {
 
     if (cached) return cached;
 
-    // Try the same direct cover URL that previously
-    // displayed actual covers in the catalogue.
     const directCover =
       'https://covers.openlibrary.org/b/title/' +
       encodeURIComponent(title) +
@@ -1362,13 +1385,10 @@ export class App implements OnInit, OnDestroy {
 
     const fallback = this.makeBookCover(book);
 
-    // If the fallback itself fails, stop retrying.
     if (image.src.startsWith('data:image/svg+xml')) {
       return;
     }
 
-    // If lookup has already been attempted,
-    // use the custom fallback immediately.
     if (this.bookCoverLoading.has(key)) {
       image.src = fallback;
       return;
@@ -1424,7 +1444,6 @@ export class App implements OnInit, OnDestroy {
             `https://covers.openlibrary.org/b/id/${match.cover_i}-M.jpg`;
 
           this.bookCoverCache.set(key, actualCover);
-
           image.src = actualCover;
         } else {
           this.bookCoverCache.set(key, fallback);
@@ -1440,4 +1459,33 @@ export class App implements OnInit, OnDestroy {
       }
     });
   }
+
+  // ============================================
+  // MEMBER: RETURN BORROWED BOOK
+  // ============================================
+
+  returnBook(loanId: string): void {
+    if (this.role !== 'MEMBER') return;
+
+    if (!confirm('Are you sure you want to return this book?')) {
+      return;
+    }
+
+    this.http.post<any>(
+      `${this.API}/loans/${loanId}/return`,
+      {}
+    ).subscribe({
+      next: () => {
+        alert('Book returned successfully!');
+        this.loadDashboard();
+        this.loadBooks();
+        this.loadReservations();
+      },
+      error: err => {
+        alert(this.errorText(err, 'Unable to return book.'));
+      }
+    });
+  }
+
 }
+

@@ -34,6 +34,10 @@ router = APIRouter(
 )
 
 
+# =====================================
+# MEMBER: CREATE RESERVATION
+# =====================================
+
 @router.post(
     "",
     response_model=ReservationResponse,
@@ -51,6 +55,83 @@ def reserve_book(
     )
 
 
+# =====================================
+# LIBRARIAN: VIEW ALL RESERVATIONS
+# =====================================
+
+@router.get("/librarian/all")
+def librarian_reservations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_librarian)
+):
+    rows = db.execute(
+        select(Reservation, User, Book)
+        .join(
+            User,
+            Reservation.user_id == User.id
+        )
+        .join(
+            Book,
+            Reservation.book_id == Book.id
+        )
+        .order_by(
+            Reservation.created_at.desc(),
+            Reservation.id.desc()
+        )
+    ).all()
+
+    # Calculate FIFO queue positions for WAITING
+    # reservations separately for each book.
+    waiting_by_book = {}
+
+    for reservation, user, book in rows:
+        if reservation.status == "WAITING":
+            book_id = reservation.book_id
+
+            waiting_by_book.setdefault(
+                book_id,
+                []
+            ).append(reservation)
+
+    queue_positions = {}
+
+    for book_id, waiting_reservations in waiting_by_book.items():
+        waiting_reservations.sort(
+            key=lambda reservation: (
+                reservation.created_at,
+                str(reservation.id)
+            )
+        )
+
+        for position, reservation in enumerate(
+            waiting_reservations,
+            start=1
+        ):
+            queue_positions[reservation.id] = position
+
+    results = []
+
+    for reservation, user, book in rows:
+        results.append({
+            "id": str(reservation.id),
+            "member_name": user.name,
+            "member_email": user.email,
+            "book_title": book.title,
+            "status": reservation.status,
+            "queue_position": queue_positions.get(
+                reservation.id
+            ),
+            "created_at": reservation.created_at,
+            "hold_expires_at": reservation.hold_expires_at
+        })
+
+    return results
+
+
+# =====================================
+# MEMBER: MY RESERVATIONS
+# =====================================
+
 @router.get(
     "/me",
     response_model=list[ReservationResponse]
@@ -61,13 +142,19 @@ def my_reservations(
 ):
     return db.scalars(
         select(Reservation)
-        .where(Reservation.user_id == current_user.id)
+        .where(
+            Reservation.user_id == current_user.id
+        )
         .order_by(
             Reservation.created_at.desc(),
             Reservation.id.desc()
         )
     ).all()
 
+
+# =====================================
+# MEMBER: CANCEL RESERVATION
+# =====================================
 
 @router.delete(
     "/{reservation_id}",
@@ -84,6 +171,10 @@ def cancel_my_reservation(
         reservation_id=reservation_id
     )
 
+
+# =====================================
+# LIBRARIAN: EXPIRE RESERVATION HOLDS
+# =====================================
 
 @router.post("/expire-holds")
 def expire_reservation_holds(
@@ -119,7 +210,8 @@ def expire_reservation_holds(
     except Exception:
         db.rollback()
         raise
-    
+
+
 # =====================================
 # MEMBER: RESERVATION QUEUE POSITION
 # =====================================

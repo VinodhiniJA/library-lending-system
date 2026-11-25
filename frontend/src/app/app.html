@@ -110,6 +110,14 @@
           <span class="menu-icon">✎</span>
           <span>Manage Books</span>
         </button>
+        <button
+  type="button"
+  class="sidebar-link"
+  [class.active]="page === 'librarian-reservations'"
+  (click)="navigate('librarian-reservations')">
+  <span class="menu-icon">▤</span>
+  <span>Reservations</span>
+</button>
 
       </nav>
 
@@ -167,6 +175,7 @@
               : page === 'my-requests' ? 'My Requests'
               : page === 'approvals' ? 'Request Approvals'
               : page === 'manage-books' ? 'Manage Books'
+              : page === 'librarian-reservations' ? 'Reservations Management'
               : page === 'reservations' ? 'Reservations'
               : page === 'fines' ? 'Fines'
               : 'Library'
@@ -1028,6 +1037,103 @@
           </div>
 
         </section>
+        <!-- ====================================
+     LIBRARIAN RESERVATIONS MANAGEMENT
+     ==================================== -->
+
+<section
+  *ngIf="role === 'LIBRARIAN' && page === 'librarian-reservations'">
+
+  <div class="section-heading">
+
+    <div>
+      <div class="eyebrow">
+        LIBRARY MANAGEMENT
+      </div>
+
+      <h1>Reservations Management</h1>
+
+      <p class="section-subtitle">
+        View member reservations, FIFO queue positions
+        and reservation hold expiry.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="refresh-btn"
+      title="Refresh reservations"
+      aria-label="Refresh reservations"
+      (click)="loadLibrarianReservations()">
+      ↻
+    </button>
+
+  </div>
+
+  <div
+    *ngIf="librarianReservations.length === 0"
+    class="empty-state">
+
+    <div class="empty-icon">🔖</div>
+
+    <h3>No reservations available</h3>
+
+    <p>Member reservations will appear here.</p>
+
+  </div>
+
+  <div class="record-grid">
+
+    <article
+      *ngFor="let reservation of librarianReservations"
+      class="record-card">
+
+      <div class="record-icon">🔖</div>
+
+      <h3>{{ reservation.book_title }}</h3>
+
+      <span
+        class="status-pill"
+        [class.pending]="reservation.status === 'WAITING'"
+        [class.approved]="reservation.status === 'HELD'"
+        [class.cancelled]="reservation.status === 'CANCELLED'">
+
+        {{ reservation.status }}
+
+      </span>
+
+      <p>
+        <strong>Member:</strong>
+        {{ reservation.member_name }}
+      </p>
+
+      <p>
+        <strong>Email:</strong>
+        {{ reservation.member_email }}
+      </p>
+
+      <p>
+        <strong>Queue Position:</strong>
+        {{ reservation.queue_position ?? 'N/A' }}
+      </p>
+
+      <p>
+        <strong>Reserved Date:</strong>
+        {{ reservation.created_at | date:'medium' }}
+      </p>
+
+      <p>
+        <strong>Hold Expiry:</strong>
+        {{ reservation.hold_expires_at
+          ? (reservation.hold_expires_at | date:'medium')
+          : 'N/A' }}
+      </p>
+
+    </article>
+
+  </div>
+
+</section>
 
         <!-- ====================================
              LIBRARIAN BOOK MANAGEMENT
